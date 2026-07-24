@@ -1,0 +1,19 @@
+these are personal notice i want to jot down based on issues
+i encounter when developing the application
+
+
+when i added the new service device service into 
+my folder parent directory Home energy microservices
+hence having two spring boot project in the folder
+
+
+my package declaration was marked as does not exist
+and the imports do not work. it seems java is not working
+in the device service.
+
+the issue has to do with my ide workspace folder. i now have
+two maven projects. the ide does not recognise the device-service 
+as a maven project
+
+i had to make my ide update the workspace
+Ctrl+Shift+P and running Java: Clean Java Language Server Workspace
