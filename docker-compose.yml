@@ -44,6 +44,9 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_NUM_PARTITIONS: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
 
     volumes:
       - ./docker/kafka_data:/var/lib/kafka/data
@@ -61,6 +64,37 @@ services:
       DYNAMIC_CONFIG_ENABLED: 'true'
     restart: unless-stopped
 
+  influxdb3-core:
+    container_name: influxdb3-core
+    image: influxdb:3-core
+    ports:
+      - 8181:8181
+    command:
+      - influxdb3
+      - serve
+      - --node-id=node0
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3/data
+      - --plugin-dir=/var/lib/influxdb3/plugins
+    volumes:
+      - type: bind
+        source: ./docker/influxdb_data
+        target: /var/lib/influxdb3/data
+      - type: bind
+        source: ./docker/influxdb_plugins
+        target: /var/lib/influxdb3/plugins
+
+  influxdb3-explorer:
+      container_name: influxdb3-explorer
+      image: influxdata/influxdb3-ui
+      ports:
+        - "8080:8080"
+        - "8443:8443"
+      command:
+        - --mode=admin
+      depends_on:
+        - influxdb3-core
+      restart: unless-stopped
 
 volumes:
   db-data:
