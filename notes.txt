@@ -17,3 +17,60 @@ as a maven project
 
 i had to make my ide update the workspace
 Ctrl+Shift+P and running Java: Clean Java Language Server Workspace
+
+
+I keep having permission issues with docker volumes and 
+Serve command failed: failed to initialize catalog: 
+
+object store error: 
+ObjectStore(Generic { 
+    store: "LocalFileSystem", 
+    source: UnableToCreateDir { 
+        source: Os { code: 13, kind: PermissionDenied, message: "Permission denied" }, 
+        path: "/var/lib/influxdb3/data/node0/catalog/v3" 
+        } 
+    }
+)
+
+this error says, the docker container user for influxdb3 is not about to create 
+a director of the path highlights.
+
+why is that. 
+
+
+Container by default lose the data we store in them when they are removed.
+To prevent us from losing the data stored in them, every time we restarts the container,
+we need a persistent storage for our data in the container.
+
+Docker volumes is a persistent data store for container. It means 
+docker create a directory on our host machine for a container data storage.
+
+when a volumes is attached to a container, it reads and store data in that volume/ directory,
+the data is persisted as long as the directory exists.
+
+the issue now is docker creates the directory / volumes has a root user. meaning 
+it is the owner of the directory has reads to modify it .
+
+the influxDb container also uses a non root user to run this command as the first thing it 
+does.
+to create subdirectory (
+    command:
+      - influxdb3
+      - serve
+      - --node-id=node0
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3/data
+      - --plugin-dir=/var/lib/influxdb3/plugins
+) in 
+a directory that is not owned by it. hence it is not permissed because it is not his.
+
+to solve this i changed the influxDB container's user to root. 
+which is less secured but a fastest way to be unblocked. hence it create create the subdirectory
+because it owns it 
+
+
+summary 
+volume created by docker root → InfluxDB runs as non-root → 
+non-root can't write into root-owned dir → 
+switched to user: root to bypass the check.
+
