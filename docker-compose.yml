@@ -11,7 +11,7 @@ services:
       - "3306:3306"
     volumes:
       - db-data:/var/lib/mysql
-      - db-data:/var/logs/mysql
+      - db-data:/var/log/mysql
 
   kafka:
     container_name: kafka
@@ -67,6 +67,7 @@ services:
   influxdb3-core:
     container_name: influxdb3-core
     image: influxdb:3-core
+    user: root
     ports:
       - 8181:8181
     command:
@@ -77,12 +78,8 @@ services:
       - --data-dir=/var/lib/influxdb3/data
       - --plugin-dir=/var/lib/influxdb3/plugins
     volumes:
-      - type: bind
-        source: ./docker/influxdb_data
-        target: /var/lib/influxdb3/data
-      - type: bind
-        source: ./docker/influxdb_plugins
-        target: /var/lib/influxdb3/plugins
+      - influxdb_data:/var/lib/influxdb3/data
+      - influxdb_data:/var/lib/influxdb3/plugins
 
   influxdb3-explorer:
       container_name: influxdb3-explorer
@@ -99,3 +96,5 @@ services:
 volumes:
   db-data:
   kafka_data:
+  influxdb_data:
+  

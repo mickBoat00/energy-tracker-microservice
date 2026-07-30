@@ -28,3 +28,4 @@ docker/
 
 # Maven build output
 target/
+.vscode/
