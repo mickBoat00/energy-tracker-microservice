@@ -1,0 +1,17 @@
+package com.meichel.usage_service.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@AllArgsConstructor
+public class DeviceEnergyUsage {
+    private Long DeviceId;
+    private String name;
+    private String type;
+    private Double EnergyConsumed;
+    private Long userId;
+}

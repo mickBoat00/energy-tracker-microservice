@@ -69,6 +69,12 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
+					<jvmArguments>
+						--add-opens=java.base/java.nio=ALL-UNNAMED
+						--sun-misc-unsafe-memory-access=allow
+						-Dio.netty.allocator.type=pooled
+						-Dio.netty.noUnsafe=false
+					</jvmArguments>
 					<excludes>
 						<exclude>
 							<groupId>org.projectlombok</groupId>
