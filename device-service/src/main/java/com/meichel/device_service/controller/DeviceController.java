@@ -1,5 +1,7 @@
 package com.meichel.device_service.controller;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -46,6 +48,11 @@ public class DeviceController {
     public ResponseEntity<Void> deleteDevice(@PathVariable Long id) {
         deviceService.deleteDevice(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/user/{userId}/")
+    public ResponseEntity<List<Device>> getDevicesForUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(deviceService.userDevices(userId));
     }
 
 }

@@ -1,5 +1,7 @@
 package com.meichel.device_service.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import com.meichel.device_service.entity.Device;
@@ -40,6 +42,10 @@ public class DeviceService {
             throw new DeviceNotFoundException(id);
         }
         deviceRepository.deleteById(id);
+    }
+
+    public List<Device> userDevices(Long userId) {
+        return deviceRepository.findByUserId(userId);
     }
 
 }
