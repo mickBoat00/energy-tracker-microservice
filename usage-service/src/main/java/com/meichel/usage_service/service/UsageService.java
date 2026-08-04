@@ -1,10 +1,13 @@
 package com.meichel.usage_service.service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -22,6 +25,7 @@ import com.meichel.usage_service.client.UserClient;
 import com.meichel.usage_service.dto.DeviceEnergyUsage;
 import com.meichel.usage_service.dto.DeviceResponse;
 import com.meichel.usage_service.dto.UserResponse;
+import com.meichel.usage_service.dto.UserUsageResponse;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,11 +43,10 @@ public class UsageService {
     private String kafkaTopic = "usage-alerts";
 
     public UsageService(
-        InfluxDBClient influxDBClient, 
-        DeviceClient deviceClient, 
-        UserClient userClient,
-        KafkaTemplate<String, UsageAlertEvent> kafkaTemplate
-    ) {
+            InfluxDBClient influxDBClient,
+            DeviceClient deviceClient,
+            UserClient userClient,
+            KafkaTemplate<String, UsageAlertEvent> kafkaTemplate) {
         this.influxDBClient = influxDBClient;
         this.deviceClient = deviceClient;
         this.userClient = userClient;
@@ -70,91 +73,157 @@ public class UsageService {
     @Scheduled(cron = "0 * * * * *")
     public void aggregateDeviceEnergyUsage() {
 
-            ArrayList<DeviceEnergyUsage> devicesEnergies = new ArrayList<DeviceEnergyUsage>();
+        ArrayList<DeviceEnergyUsage> devicesEnergies = new ArrayList<DeviceEnergyUsage>();
 
-            String sql = """
+        String sql = """
+                SELECT device_id, SUM(energy_consumed) as total
+                FROM consumption
+                WHERE time >= now() - INTERVAL '1 hour'
+                GROUP BY device_id
+                """;
+        try (Stream<Object[]> stream = influxDBClient.query(sql)) {
+            log.info("energy usage aggregation recieved.");
+            stream.forEach(row -> {
+                devicesEnergies.add(
+                        DeviceEnergyUsage
+                                .builder()
+                                .DeviceId(Long.parseLong((String) row[0]))
+                                .EnergyConsumed((Double) row[1])
+                                .build());
+            });
+        } catch (Exception e) {
+            log.error("Failed to query data from the database: ");
+            e.printStackTrace();
+            return;
+        }
+
+        for (DeviceEnergyUsage device : devicesEnergies) {
+            try {
+                DeviceResponse recievedDevice = deviceClient.getDeviceById(device.getDeviceId());
+                device.setName(recievedDevice.getName());
+                device.setType(recievedDevice.getType());
+                device.setUserId(recievedDevice.getUserId());
+            } catch (Exception e) {
+                log.warn("Failed to fetch device {}: {}", device.getDeviceId(), e.getMessage());
+                continue;
+            }
+
+        }
+
+        Map<Long, List<DeviceEnergyUsage>> devicesByUser = devicesEnergies.stream()
+                .filter(device -> device.getUserId() != null)
+                .collect(Collectors.groupingBy(DeviceEnergyUsage::getUserId));
+
+        Map<Long, Double> totalByUser = devicesByUser.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().stream()
+                                .mapToDouble(DeviceEnergyUsage::getEnergyConsumed)
+                                .sum()));
+
+        for (Map.Entry<Long, Double> entry : totalByUser.entrySet()) {
+            Long userId = entry.getKey();
+            Double total = entry.getValue();
+
+            UserResponse user;
+            try {
+                user = userClient.getUserById(userId);
+            } catch (Exception e) {
+                log.warn("Failed to fetch user {}: {}", userId, e.getMessage());
+                continue;
+            }
+
+            if (user.enableAlerting() && total > user.alertingThreshold()) {
+                UsageAlertEvent event = UsageAlertEvent.builder()
+                        .userId(userId)
+                        .email(user.email())
+                        .totalConsumed(total)
+                        .threshold(user.alertingThreshold())
+                        .devices(devicesByUser.get(userId))
+                        .timestamp(LocalDateTime.now())
+                        .build();
+
+                try {
+                    kafkaTemplate.send(kafkaTopic, event);
+                    log.info("Event {} sent to topic: {}", event, kafkaTopic);
+                } catch (Exception e) {
+                    log.error("Failed to send event to topic {}: {}", event, kafkaTopic);
+                    continue;
+                }
+
+            }
+        }
+
+    }
+
+    public UserUsageResponse getUserDevicesUsage(Long userId, long interval, ChronoUnit intervalUnit) {
+        List<DeviceEnergyUsage> devicesEnergies = new ArrayList<>();
+        UserResponse user = null;
+
+        try {
+            user = userClient.getUserById(userId);
+        } catch (Exception e) {
+            log.warn("Failed to fetch user {}: {}", userId, e.getMessage());
+        }
+
+        try {
+            List<DeviceResponse> devices = deviceClient.getUserDevices(userId);
+            log.info("device client response {}", devices);
+
+            if (devices != null && !devices.isEmpty()) {
+                Map<Long, DeviceResponse> deviceById = devices.stream()
+                        .collect(Collectors.toMap(DeviceResponse::getId, Function.identity()));
+
+                String deviceIdsCsv = devices.stream()
+                        .map(d -> "'" + d.getId() + "'")
+                        .collect(Collectors.joining(","));
+
+                Instant start = java.time.ZonedDateTime.now(ZoneOffset.UTC).minus(interval, intervalUnit).toInstant();
+                String startTs = start.toString();
+
+                String sql = String.format("""
                         SELECT device_id, SUM(energy_consumed) as total
                         FROM consumption
-                        WHERE time >= now() - INTERVAL '1 hour'
+                        WHERE time >= '%s'
+                          AND device_id IN (%s)
                         GROUP BY device_id
-                        """;
-            try (Stream<Object[]> stream = influxDBClient.query(sql)) {
-                log.info("energy usage aggregation recieved.");
-                stream.forEach(row -> {
-                    devicesEnergies.add(
-                        DeviceEnergyUsage
-                        .builder()
-                        .DeviceId(Long.parseLong((String) row[0]))
-                        .EnergyConsumed((Double) row[1])
-                        .build()
-                    );
-                });
-            }
-            catch (Exception e) {
-                log.error("Failed to query data from the database: ");
-                e.printStackTrace();
-                return;
-            }
+                        """, startTs, deviceIdsCsv);
 
-            for (DeviceEnergyUsage device: devicesEnergies) {
-                try {
-                    DeviceResponse recievedDevice =  deviceClient.getDeviceById(device.getDeviceId());
-                    device.setName(recievedDevice.getName());
-                    device.setType(recievedDevice.getType());
-                    device.setUserId(recievedDevice.getUserId());
+                try (Stream<Object[]> stream = influxDBClient.query(sql)) {
+                    log.info("energy usage aggregation received.");
+                    stream.forEach(row -> {
+                        Long deviceId = Long.parseLong((String) row[0]);
+                        Double total = (Double) row[1];
+                        DeviceResponse device = deviceById.get(deviceId);
+
+                        devicesEnergies.add(DeviceEnergyUsage.builder()
+                                .DeviceId(deviceId)
+                                .name(device != null ? device.getName() : null)
+                                .type(device != null ? device.getType() : null)
+                                .EnergyConsumed(total)
+                                .userId(userId)
+                                .build());
+                    });
                 } catch (Exception e) {
-                    log.warn("Failed to fetch device {}: {}", device.getDeviceId(), e.getMessage());
-                    continue;
+                    log.error("Failed to query data from the database", e);
                 }
-                
+            } else {
+                log.warn("no devices found for user {}", userId);
             }
 
-            Map<Long, List<DeviceEnergyUsage>> devicesByUser = devicesEnergies.stream()
-            .filter(device -> device.getUserId() != null)
-            .collect(Collectors.groupingBy(DeviceEnergyUsage::getUserId));
+        } catch (Exception e) {
+            log.error("failed to fetch user devices", e);
+        }
 
-            Map<Long, Double> totalByUser = devicesByUser.entrySet().stream()
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            entry -> entry.getValue().stream()
-                                    .mapToDouble(DeviceEnergyUsage::getEnergyConsumed)
-                                    .sum()
-                    ));
+        double totalEnergyConsumed = devicesEnergies.stream()
+                .mapToDouble(d -> d.getEnergyConsumed() != null ? d.getEnergyConsumed() : 0.0)
+                .sum();
 
-            for (Map.Entry<Long, Double> entry : totalByUser.entrySet()) {
-                Long userId = entry.getKey();
-                Double total = entry.getValue();
-            
-                UserResponse user;
-                try {
-                    user = userClient.getUserById(userId);
-                } catch (Exception e) {
-                    log.warn("Failed to fetch user {}: {}", userId, e.getMessage());
-                    continue;
-                }
-            
-                if (user.enableAlerting() && total > user.alertingThreshold()) {
-                    UsageAlertEvent event = UsageAlertEvent.builder()
-                            .userId(userId)
-                            .email(user.email())
-                            .totalConsumed(total)
-                            .threshold(user.alertingThreshold())
-                            .devices(devicesByUser.get(userId))
-                            .timestamp(LocalDateTime.now())
-                            .build();
-
-                    try {
-                        kafkaTemplate.send(kafkaTopic, event);
-                        log.info("Event {} sent to topic: {}", event, kafkaTopic);
-                    } catch (Exception e) {
-                        log.error("Failed to send event to topic {}: {}", event, kafkaTopic);
-                        continue;
-                    }
-    
-                    
-                }
-            }
-
-    } 
+        return UserUsageResponse.builder()
+                .user(user)
+                .devices(devicesEnergies)
+                .totalEnergyConsumed(totalEnergyConsumed)
+                .build();
+    }
 
 }

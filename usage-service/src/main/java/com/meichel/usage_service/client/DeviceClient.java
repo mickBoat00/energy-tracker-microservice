@@ -1,6 +1,9 @@
 package com.meichel.usage_service.client;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import com.meichel.usage_service.dto.DeviceResponse;
@@ -20,6 +23,13 @@ public class DeviceClient {
                 .uri("/api/v1/devices/{id}/", id)
                 .retrieve()
                 .body(DeviceResponse.class);
+    }
+
+    public List<DeviceResponse> getUserDevices(Long userId) {
+        return restClient.get()
+                .uri("/api/v1/devices/user/{userId}/", userId)
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<DeviceResponse>>() {});
     }
 
     

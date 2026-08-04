@@ -1,4 +1,4 @@
-package com.meichel.usage_service.dto;
+package com.meichel.insight_service.dto;
 
 public record UserResponse(
         Long id,
