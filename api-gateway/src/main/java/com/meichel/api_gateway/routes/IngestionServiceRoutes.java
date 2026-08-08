@@ -1,0 +1,39 @@
+package com.meichel.api_gateway.routes;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.servlet.function.RequestPredicates;
+import org.springframework.web.servlet.function.RouterFunction;
+import org.springframework.web.servlet.function.ServerResponse;
+
+import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.uri;
+import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions.route;
+import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions.http;
+
+import java.net.URI;
+import org.springframework.cloud.gateway.server.mvc.filter.CircuitBreakerFilterFunctions;
+
+@Configuration
+public class IngestionServiceRoutes {
+    @Bean
+    public RouterFunction<ServerResponse> ingestionRoutes() {
+
+        return route("ingestion-service")
+                .route(RequestPredicates.path("/api/v1/ingestion/**"), http())
+                .before(uri("http://localhost:8083"))
+                .filter(CircuitBreakerFilterFunctions.circuitBreaker(
+                        "ingestionServiceCircuitBreaker", URI.create("forward:/ingestionFallbackRoute")))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> ingestionFallbackRoute() {
+        return route("ingestionFallbackRoute")
+                .route(
+                        RequestPredicates.path("/ingestionFallbackRoute"),
+                        request -> ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
+                                .body("Ingestion service is down"))
+                .build();
+    }
+}
