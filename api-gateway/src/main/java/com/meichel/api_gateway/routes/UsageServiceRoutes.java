@@ -3,7 +3,6 @@ package com.meichel.api_gateway.routes;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.web.servlet.function.RequestPredicates;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
@@ -14,39 +13,38 @@ import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouter
 import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions.http;
 
 import java.net.URI;
-
 import org.springframework.cloud.gateway.server.mvc.filter.CircuitBreakerFilterFunctions;
 import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions;
 
 @Configuration
-public class UserServiceRoutes {
-
+public class UsageServiceRoutes {
     @Bean
-    public RouterFunction<ServerResponse> userRoutes() {
-        return route("user-service")
-                .route(RequestPredicates.path("/api/v1/users/**"), http())
-                .before(uri("http://localhost:8081"))
+    public RouterFunction<ServerResponse> usageRoutes() {
+
+        return route("usage-service")
+                .route(RequestPredicates.path("/api/v1/usage/**"), http())
+                .before(uri("http://localhost:8084"))
                 .filter(CircuitBreakerFilterFunctions.circuitBreaker(
-                        "userServiceCircuitBreaker", URI.create("forward:/fallbackRoute")))
+                        "usageServiceCircuitBreaker", URI.create("forward:/usageFallbackRoute")))
                 .build();
     }
 
     @Bean
-    public RouterFunction<ServerResponse> userFallbackRoute() {
-        return route("fallbackRoute")
+    public RouterFunction<ServerResponse> usageFallbackRoute() {
+        return route("usageFallbackRoute")
                 .route(
-                        RequestPredicates.path("/fallbackRoute"),
+                        RequestPredicates.path("/usageFallbackRoute"),
                         request -> ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
-                                .body("User service is down"))
+                                .body("Usage service is down"))
                 .build();
     }
 
     @Bean
-    public RouterFunction<ServerResponse> userServiceApiDocs() {
-        return GatewayRouterFunctions.route("user-service-api-docs")
-                .route(RequestPredicates.path("/docs/user-service/v3/api-docs"),
+    public RouterFunction<ServerResponse> usageServiceApiDocs() {
+        return GatewayRouterFunctions.route("usage-service-api-docs")
+                .route(RequestPredicates.path("/docs/usage-service/v3/api-docs"),
                         http())
-                .before(uri("http://localhost:8081"))
+                .before(uri("http://localhost:8084"))
                 .filter(setPath("/v3/api-docs"))
                 .build();
     }

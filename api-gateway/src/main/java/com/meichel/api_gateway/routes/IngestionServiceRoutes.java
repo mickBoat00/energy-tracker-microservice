@@ -7,12 +7,14 @@ import org.springframework.web.servlet.function.RequestPredicates;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
 
+import static org.springframework.cloud.gateway.server.mvc.filter.FilterFunctions.setPath;
 import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.uri;
 import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions.route;
 import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions.http;
 
 import java.net.URI;
 import org.springframework.cloud.gateway.server.mvc.filter.CircuitBreakerFilterFunctions;
+import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions;
 
 @Configuration
 public class IngestionServiceRoutes {
@@ -34,6 +36,16 @@ public class IngestionServiceRoutes {
                         RequestPredicates.path("/ingestionFallbackRoute"),
                         request -> ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
                                 .body("Ingestion service is down"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> ingestionServiceApiDocs() {
+        return GatewayRouterFunctions.route("ingestion-service-api-docs")
+                .route(RequestPredicates.path("/docs/ingestion-service/v3/api-docs"),
+                        http())
+                .before(uri("http://localhost:8083"))
+                .filter(setPath("/v3/api-docs"))
                 .build();
     }
 }
