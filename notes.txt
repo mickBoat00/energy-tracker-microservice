@@ -74,3 +74,168 @@ volume created by docker root → InfluxDB runs as non-root →
 non-root can't write into root-owned dir → 
 switched to user: root to bypass the check.
 
+
+So to add authentication to my backend api endpoints, with protected endpoints
+every request must have a request header with bearer token that identifies a user 
+and authenticates the request.
+
+In a simple application backend api, i will have an endpoint like /login
+where the user will send their credentials, verify they are existing user and
+generate a jwt token for the which there can add to every subsequent request to the backend endpoints.
+
+Jwt are small data packages in json format that is crypographically signed with a private key, 
+containing user details like id, roles, permission etc.
+The the jwt is in this format <header>.<payload>.<signature>
+
+The headers and payload can be easily decode. the most important part is the signature. 
+the signature is where we verify that the jwt was signed by the us. 
+
+Now with my user identity and authentication, i am entrusting a third party service, keycloack 
+to handle it. keycloack become my Authentication Server
+so my users will interact with keycloack and once they are authenticated with them, 
+keycloack give them an access token, that is a jwt token with the signature signed by their private key.
+
+my backend becomes the resource server side note thats why i have 
+this dependency <dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+		</dependency>
+
+and i recieve request with headers containing the jwt token. 
+
+
+now the most important part is to verify the token was from keycloack using the signature part of the token.
+Because keycloack signs jwt with their private key. all i need is their public key to verify the token 
+was signed my truster authentication provider keycloack. 
+
+how do i get the public key, 
+1. i can manually copy the private key in my environment and use it to verify the signature,
+problems with that is keycloack changes their private keys frequently hence i have to update it frequently
+and it not feasible.
+
+the best approach to get the public keys is through keycloacks Json web key sets endpoint.
+keycloack exposes an endpoint where i can get the public keys to verify token signed by their private keys.
+
+once i get the public key from key cloack, i can verify the signature and decode the header and payload
+easily with base64encoding. 
+
+now the user is authenticated to access resources in my application. 
+
+
+
+
+
+
+
+Now shifting our focus to our users and their interaction with keycloack.
+
+
+what happens before the user is given a JWT to be sent to the backend.
+
+To understand it we first need to understand these protocols Oauth2 and openid connect used for authentication.
+
+Oauth2 is a protocol where users grants a third party application, access to its data in a particular service.
+without sharing their password.
+
+for eg, a user has contact saved in google, and external application needs access to them.
+the user can grant access to that external application without giving them their password to google.
+throught oauth2.
+
+a simple flow will be 
+- the external app will have a sign in with google button
+- the user clicks on the button, and he is redirect to google to sign in.
+- once done a consent page shows up with a list of permissions the external application
+is requesting access to. 
+- the eternal app made a initial request with a list of scopes eg, contacts:get, contacts:delete
+- once the user, agrees, the external app is give an authorization code
+- sends to the authorization code back to the google for an access token
+- the external app can use the access token to access these resource.
+
+openid connect is an extension of oauth2, oauth2 is not designed for authentication, but 
+for permissions and scope hences using it only is bad for authentication.
+
+openid connect extends by adds openid to the scope, the external app sends 
+- after the user consents, an access token, a id token and a /userinfo endpoint 
+is sent to the external app.
+- the id token is jwt of the user and /userinfo contains more information of that user.
+
+keycloack is and identity and access management service which supports oauth2 and openid connect (oidc),
+
+- our fronted has a sign in with keycloack 
+- our frontend send redirect user with a request that has a scope of openid to keycloack server,
+- user authenticates and a authorization code is sent to our frontend,
+- frontend exchanges the authorization code for access token and  id token which are jwts
+- frontend sends access token jwt to our backend api.
+
+
+
+
+
+so shifting focues to client and keycloack interactions
+oauth2 and openid connect are protocols to authenticate our application
+
+So now we need a way the user can interact with keycloack, and generate jwt for the client
+
+what ever client we create like a frontend with using
+it will use oauth2 and openid connect protocols to authenticate the application.
+
+Oauth2 Open Authorization 
+
+
+When our users interact with keycloack, they will have their data like their profile details, 
+password with them. 
+
+now my client application will need permission from the user to request those data from keycloack.
+the protocol that allows other client, a third party application to request data of a user from 
+other service without sharing their password is Oauth2 (Open Authorization 2)
+
+our client can be a frontend application with a sign in with keycloack button, or postman since 
+we are developing a backend apis currently. our client will have to be registered with keycloack.
+
+a simple flow will be 
+a user clicks on log in with keycloack. from my client application, the browser redirect
+them to keycloack where they have to sign in.
+
+after that there is a consent page that list the kind of data our frontend will be requesting from 
+keycloack called (scopes) if we were dealing with google as an example
+the scope will be contacts:get, contacts:update, etc.
+a scope will openid 
+
+in the case of keycloack our scope will only be openid:true.
+
+in a frontend, it will list the scopes the user should allow access to, 
+the user will have to grant permission, 
+
+
+once the user consents, an authorization code will be given to our frontend, 
+the frontend sends it back to the keycloack in exchange for an access token. 
+
+now our frontend can use the access token to request data of the user from keycloack 
+and keycloack with grant them access. keycloack only grants access to resource within the scope 
+the access token was. anything outside the scope will not be allowed. 
+
+
+openid connect is an extension of oauth2 where we can ask for id token and /userinfo endpoint in 
+adding to the access token, 
+
+the id token is the jwt token with information about the user. 
+
+
+Our  will have its data with keycloack , because we have introduce them in our application, 
+i will 
+
+
+
+
+why third party 
+security is a very hard concept to handle 
+as technology evolves, there are many ways i system can be hacked,
+when why not introduces experts who i constant battling and working on 
+security to handle security for my applications. 
+
+
+https://medium.com/@dinesharney/part-1-who-are-you-understanding-authentication-in-simple-terms-08ba0a71fef2
+
+https://www.reddit.com/r/webdev/comments/zxic71/what_are_the_benefits_of_using_a_3rd_party_for/
+
+https://medium.com/israeli-tech-radar/oauth-2-0-and-openid-connect-for-dummies-6fa6e995d6d5
