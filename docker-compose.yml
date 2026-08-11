@@ -82,19 +82,33 @@ services:
       - influxdb_data:/var/lib/influxdb3/plugins
 
   influxdb3-explorer:
-      container_name: influxdb3-explorer
-      image: influxdata/influxdb3-ui
-      ports:
-        - "8080:8080"
-        - "8443:8443"
-      command:
-        - --mode=admin
-      depends_on:
-        - influxdb3-core
-      restart: unless-stopped
+    container_name: influxdb3-explorer
+    image: influxdata/influxdb3-ui
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    command:
+      - --mode=admin
+    depends_on:
+      - influxdb3-core
+    restart: unless-stopped
+
+  keycloack:
+    container_name: keycloack
+    image: quay.io/keycloak/keycloak:26.7.1
+    ports:
+      - "8091:8080"
+    command:
+      - start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes:
+      - keycloak_data:/opt/keycloak/data
 
 volumes:
   db-data:
   kafka_data:
   influxdb_data:
+  keycloak_data:
   
