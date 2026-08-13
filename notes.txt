@@ -234,6 +234,16 @@ when why not introduces experts who i constant battling and working on
 security to handle security for my applications. 
 
 
+observability
+
+The actuator provides a series of built-in endpoints to display performance information 
+about the running application, such as health, metrics, and more. 
+
+The Micrometer Prometheus registry then formats these metrics into a Prometheus-readable format.
+
+https://medium.com/simform-engineering/revolutionize-monitoring-empowering-spring-boot-applications-with-prometheus-and-grafana-e99c5c7248cf
+
+
 https://medium.com/@dinesharney/part-1-who-are-you-understanding-authentication-in-simple-terms-08ba0a71fef2
 
 https://www.reddit.com/r/webdev/comments/zxic71/what_are_the_benefits_of_using_a_3rd_party_for/
