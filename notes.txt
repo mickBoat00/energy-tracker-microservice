@@ -246,6 +246,359 @@ https://medium.com/simform-engineering/revolutionize-monitoring-empowering-sprin
 
 https://medium.com/@dinesharney/part-1-who-are-you-understanding-authentication-in-simple-terms-08ba0a71fef2
 
-https://www.reddit.com/r/webdev/comments/zxic71/what_are_the_benefits_of_using_a_3rd_party_for/
+
 
 https://medium.com/israeli-tech-radar/oauth-2-0-and-openid-connect-for-dummies-6fa6e995d6d5
+
+
+
+Authentication
+
+Adding authenticate to the microservice. We will be using third party auth provider keycloack
+
+Keycloack is an open source identity and access management which allows us to store and
+authenticate our users with mininal effort. 
+
+But why would we want to your a third party to authenticate our users.
+
+
+1. Overload security to experts: security is a huge part of an application, there is always a new way
+a system can be hacked, hence it will be wise for have security experts stay on top of the latest
+vulnerabilities. Hence third party auth provider like keycloack have dedicate experts battling 
+security vulnerability and making auth more secure. Our security liability is on them.
+
+2. It saves us time: Instead of spending hours writing code for authentication, which is outside
+our business logic, we can integrate a third party like keycloack to handle identity and acess for 
+us. so we can spend more time on our business logic.
+
+cons of keycloack 
+it has a learning curve, we need to understand what concepts behind it. understanding it can 
+take some time.
+
+
+Keycloack 
+
+Realm
+A realm is an isolated domain of clients, a set of users, credentials, roles, and groups. 
+A user belongs to and logs into a realm.
+
+Clients
+Application i want to protect with keycloack. In this my energy tracker microservice
+
+Create a realm, an a client with a client type of openid connect,other option is 
+saml. I choose openid connect.
+
+what then is openid connect. 
+
+
+
+
+
+Client authentication This switch defines the type of OIDC client. 
+When it is ON, the type is confidential access. When it is OFF, the type is public access.
+
+Off
+Authorization Enable/Disable fine-grained authorization support for a client.
+
+Off
+Authentication flow
+
+Standard flow
+
+
+Direct access grants
+
+
+Implicit flow
+
+
+Service account roles
+
+
+Standard Token Exchange
+
+
+JWT Authorization Grant
+
+
+OAuth 2.0 Device Authorization Grant
+
+
+OIDC CIBA Grant
+
+Require PKCE 
+
+Off
+Require DPoP bound tokens 
+This enables support for Demonstrating Proof-of-Possession (DPoP) bound tokens. 
+For public clients, both access and refresh tokens are bound to the key stored on the client. 
+In order to prove the possession of the key, the client must send a signed proof alongside the token. 
+For confidential clients, only access tokens are DPoP bound because, 
+following the specification, refresh tokens are already sender-constrained by the associated authentication requirement
+
+
+
+explain the 
+
+authentication flow options for keycloack client creation for me 
+
+
+Standard flow - This enables standard OpenID Connect redirect based authentication with authorization code. 
+In terms of OpenID Connect or OAuth2 specifications, this enables support of 'Authorization Code Flow' for this client.
+
+
+Direct access grants - This enables support for Direct Access Grants, 
+which means that client has access to username/password of user and exchange it directly with Keycloak server for access token. 
+In terms of OAuth2 specification, this enables support of 'Resource Owner Password Credentials Grant' for this client.
+
+
+Implicit flow - This enables support for OpenID Connect redirect based authentication without authorization code. 
+In terms of OpenID Connect or OAuth2 specifications, this enables support of 'Implicit Flow' for this client.
+
+
+Service account roles - Allows you to authenticate this client to Keycloak and retrieve access token dedicated to this client. 
+In terms of OAuth2 specification, this enables support of 'Client Credentials Grant' for this client.
+
+
+Standard Token Exchange - Enable Standard Token Exchange V2 for this client.
+
+
+JWT Authorization Grant - Enable JSON Web Token (JWT) Profile for OAuth 2.0 Authorization Grant.
+
+
+OAuth 2.0 Device Authorization Grant - This enables support for OAuth 2.0 Device Authorization Grant, which means that client is an application on device that has limited input capabilities or lack a suitable browser.
+
+
+OIDC CIBA Grant - This enables support for OIDC CIBA Grant, which means that the user is authenticated via some external authentication device instead of the user's browser.
+
+I have a rough idea of OpenID connect which is the client type. Where OIDC is an authentication protocol builds on 
+top of oauth2 where users grant access to their resources in specific application to a third party like my application, 
+
+oauth2 is used for granting access to resources by the user to a third party application. It is 
+not used for authentication. Openid builds on top of it where users grants access to things 
+need for authentication like email, without the user sharing their password. openid 
+is used for authentication.
+
+it has a flow, where user from my application needs to signin up. 
+my application redirects to a service my user already uses like google with a scope of
+openid email and then google makes the user grant permission by listing the things
+google will give to my application. once the user grants access, 
+my app with recieve an authorization code , which it will exchange for id token access token jwt. 
+
+
+
+
+So this is the standard authentication flow for an application that uses oidc for authenticating
+users. 
+
+So in my microservice api, i have endpoints what requires authentication, and the authentication
+is through openid connect. 
+Where the clients of my backend will exchange authorization code for access token. 
+
+
+The goal is to have a
+
+
+
+My backend microservice apis requires authentication when hitting protected endpoints.
+The goal is, for requests to these endpoints should have a request header of Bearer token
+with a valid jwt containing user information we can verify and if valid grant access. 
+
+There are various ways to generate the jwt token for our users.
+A simple way a simple way will be having a unprotected endpoint /login 
+where user will input their email and passwords, we check if they are in our database
+verify their password and gives them the jwt token. 
+
+the cons will this is the authentication lies on us, we have to implement everything about 
+our authentication process ourselfs, it will take time we could have using to write our business logic.
+
+Another approach is to have an Identity Provider for user authentication where users registers
+with them, and the user grants us access to their profile details details stored with them. 
+These procedure is called oidc. 
+
+
+Actors in OIDC
+users (resource owners)
+clients of my microservice api (frontend application, postman, swaggerui, curl)
+Identity Provider (Authorization servers) Keycloak
+my microservice backend (resource servers)
+
+
+
+standard flow
+clients are applications that sends request to my backend api endpoints. 
+There are various clients for eg frontend app, postman, curl, programming language 
+how do they get the jwt to add to their request header. With oidc standard flow, called 
+authorization code flow
+
+First of all i register clients with the idp and the client is 
+given a client id, client secret and access to various endpoints the clients can make
+request to 
+
+Next User is required to authentication, can click sign in or get access token, 
+
+Client redirects to keycloak authorization endpoint with client id, scope=openid, redirect url 
+
+User is shown a login page for keycloak and a consent app, where keycloak listen the resources
+it is granting access to. when user grants access 
+
+keycloak send the client an authorization code
+
+client exchanges the the authorization code for id token, access token, refresh token, 
+the access token is the jwt token it will add to its requests to my backend 
+by sending a request to the idp token endpoint with the code, client id, client secret 
+
+the client now has access token the jwt to add to subsequent request headers for authentication 
+to my protected endpoints.
+
+
+now when these request comes into my backend api, i need to verify the jwt was issued by 
+my idp keycloak before granting as, hence my make request to my idp jwt issuer uri
+for the public keys 
+
+
+
+
+
+
+
+
+reference articles
+https://www.reddit.com/r/webdev/comments/zxic71/what_are_the_benefits_of_using_a_3rd_party_for/
+
+
+
+FINAL VERSION - Authentication with Keycloak & OIDC 
+
+## 1. Adding authentication to my backend
+
+To protect my backend API endpoints, every request must carry a request header with a bearer token that identifies a user and authenticates the request.
+
+In a simple application, I would have an endpoint like /login where the user sends their credentials, I verify they are an existing user, and I generate a JWT token for them which they add to every subsequent request to my backend endpoints.
+
+The reason I don't do that is that authentication is a hard security problem, and I'm entrusting it to a third party: Keycloak. It becomes my Authentication Server. My users interact with Keycloak, and once authenticated, Keycloak gives them an access token - a JWT signed with Keycloak's private key.
+
+## 2. Why a third party (Keycloak)
+
+Pros:
+1. Security overloaded to experts - security is a huge part of any application; there's always a new way a system can be hacked. Third-party auth providers like Keycloak have dedicated experts constantly battling vulnerabilities, so the security liability is on them.
+2. It saves time - instead of spending hours writing authentication code (which is outside my business logic), I integrate Keycloak to handle identity and access, and spend more time on business logic.
+
+Cons:
+- It has a learning curve - I need to understand the concepts behind it (realms, clients, flows), and understanding them takes time.
+
+## 3. Keycloak concepts
+
+Realm - an isolated domain of clients, a set of users, credentials, roles, and groups. A user belongs to and logs into a realm. (Mine is home-energy-tracker.)
+
+Client - the application I want to protect with Keycloak. In my case, the energy tracker application (Postman / future frontend). Clients must be registered with Keycloak.
+
+When creating a client, I pick a client type: OpenID Connect (which I chose) or SAML.
+
+Client authentication switch - defines the type of OIDC client:
+- ON -> confidential access (has a client secret)
+- OFF -> public access (no secret; browser-based apps)
+
+## 4. OAuth2 - Open Authorization 2
+
+OAuth2 is a protocol where a user grants a third-party application access to their data in a particular service without sharing their password.
+
+Example: a user has contacts saved in Google, and an external application needs access to them. The user can grant access to that app without giving it their Google password.
+
+A simple flow:
+- The external app has a "Sign in with Google" button.
+- The user clicks it and is redirected to Google to sign in.
+- A consent page shows up with the list of permissions the external app is requesting.
+- The app made an initial request with a list of scopes, e.g. contacts:get, contacts:delete.
+- Once the user agrees, the external app is given an authorization code.
+- The app sends the authorization code back to Google in exchange for an access token.
+- The external app uses the access token to access those resources.
+
+Key point: OAuth2 is used for granting access to resources (permissions and scopes). It is not designed for authentication - using it alone for authentication is bad.
+
+## 5. OpenID Connect (OIDC)
+
+OIDC is an extension of OAuth2 that adds authentication on top.
+
+- OIDC adds openid to the scope the client requests.
+- After the user consents, the client receives an access token, an id token, and access to a /userinfo endpoint.
+- The id token is a JWT with information about the user.
+- The /userinfo endpoint contains more information about that user.
+
+So: OAuth2 grants access to resources; OIDC grants access to the things needed for authentication (like the user's email) - all without the user sharing their password.
+
+## 6. The complete flow in my application
+
+Actors involved:
+- Resource owner - the user (e.g. abena), who owns the credentials.
+- Client - my application (Postman / frontend), registered in Keycloak with a client id.
+- Authorization server - Keycloak; hosts the login page, issues tokens.
+- Resource server - my backend (api-gateway + microservices); only validates tokens.
+
+The flow:
+1. My frontend has a "Sign in with Keycloak" button. It redirects the user to the Keycloak auth URL with a request containing scope=openid, my client_id, and a redirect_uri.
+2. The user authenticates at Keycloak (login page with username/password).
+3. A consent page lists the scopes my app is requesting (in our case openid). The user grants permission.
+4. Keycloak redirects the user back to my redirect_uri with an authorization code (a code, not a token).
+5. My client sends the code back to Keycloak's token URL, along with client_id and client_secret (confidential client) - this is where the secret is used, never in the browser.
+6. Keycloak responds with an access token and id token (JWTs) - and a refresh token for later.
+7. My frontend sends the access token JWT to my backend API in the Authorization: Bearer <token> header.
+8. My backend verifies the token and grants access - Keycloak only grants access to resources within the scope of the token.
+
+The endpoints/variables that wire this together:
+- issuer-uri - Keycloak's identity URL (http://localhost:8091/realms/home-energy-tracker); the JWT's iss claim must equal it; used by the backend to discover the JWKS.
+- Auth URL - .../protocol/openid-connect/auth - where the browser is redirected to log in.
+- Token URL - .../protocol/openid-connect/token - where the code is exchanged for tokens.
+- JWKS/certs URL - .../protocol/openid-connect/certs - the public keys used for verification.
+- client_id / client_secret - identify and prove the client.
+- redirect_uri - where the code is delivered back to the client.
+
+## 7. My backend as a resource server
+
+My backend becomes the resource server - that's why I have the dependency:
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+    </dependency>
+
+I receive requests with headers containing the JWT token. But to understand how I verify it, I first need to understand what that token actually is.
+
+What is a JWT
+
+JWTs are small data packages in JSON format that are cryptographically signed with a private key, containing user details like id, roles, permissions, etc.
+
+The token has the format: <header>.<payload>.<signature>
+
+- The header and payload can be easily decoded (base64) - they're not secret.
+- The most important part is the signature - it's how I verify the JWT was actually signed by the issuer (us / Keycloak) and not tampered with.
+
+Verifying the token came from Keycloak
+
+The most important part is to verify the token was from Keycloak using the signature part of the token:
+
+- Keycloak signs JWTs with their private key.
+- All I need is their public key to verify the token was signed by my trusted authentication provider.
+
+How do I get the public key?
+1. Manually copy the key into my environment - problem: Keycloak rotates its keys frequently, so I'd have to update it constantly; not feasible.
+2. The JWKS endpoint (the right way) - Keycloak exposes an endpoint where I can get the public keys used to verify tokens signed by their private keys. My gateway resolves this automatically from the issuer-uri via the discovery document (.well-known/openid-configuration).
+
+Once I get the public key from Keycloak, I verify the signature and decode the header and payload easily with base64 - the user is now authenticated to access resources in my application.
+
+## 8. Client authentication flow options in Keycloak
+
+- Standard flow - standard OIDC redirect-based authentication with authorization code. (OAuth2 spec: Authorization Code Flow.) <- the one I use.
+- Direct access grants - the client has access to the user's username/password and exchanges them directly with Keycloak for an access token. (OAuth2: Resource Owner Password Credentials Grant.) This is effectively a /login endpoint.
+- Implicit flow - redirect-based authentication without an authorization code. (OAuth2: Implicit Flow - deprecated in OAuth 2.1.)
+- Service account roles - the client authenticates itself to Keycloak and retrieves an access token dedicated to this client. (OAuth2: Client Credentials Grant - service-to-service.)
+- Standard Token Exchange - enables Standard Token Exchange V2 for this client (exchange one token for another).
+- JWT Authorization Grant - JWT Profile for OAuth 2.0 Authorization Grant (an externally-signed JWT acts as the authorization).
+- OAuth 2.0 Device Authorization Grant - for apps on devices with limited input capabilities or no suitable browser.
+- OIDC CIBA Grant - the user is authenticated via an external authentication device instead of the browser.
+- Require PKCE - when ON, the client must prove it's the same app that started the flow (recommended for public clients).
+- Require DPoP bound tokens - proof-of-possession: for public clients both access and refresh tokens are bound to a client key; for confidential clients only access tokens (refresh tokens are already sender-constrained).
+
+## 9. Recap - why not just a /login endpoint?
+
+A /login endpoint that returns a JWT is the simplest mental model, but with Keycloak the same effect is achieved through flows: for my browser-based clients I use the standard flow (redirect + code + tokens); if I ever want a plain login-style endpoint for my own clients, I enable direct access grants on a client and keep Keycloak as the identity provider - I never have to build, sign, and rotate JWTs myself.

@@ -1,9 +1,9 @@
 package com.meichel.api_gateway.routes;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.web.servlet.function.RequestPredicates;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
@@ -21,11 +21,14 @@ import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctio
 @Configuration
 public class UserServiceRoutes {
 
+    @Value("${user.service.base.url}")
+    private String userServiceBaseUrl;
+
     @Bean
     public RouterFunction<ServerResponse> userRoutes() {
         return route("user-service")
                 .route(RequestPredicates.path("/api/v1/users/**"), http())
-                .before(uri("http://localhost:8081"))
+                .before(uri(userServiceBaseUrl))
                 .filter(CircuitBreakerFilterFunctions.circuitBreaker(
                         "userServiceCircuitBreaker", URI.create("forward:/fallbackRoute")))
                 .build();
@@ -46,7 +49,7 @@ public class UserServiceRoutes {
         return GatewayRouterFunctions.route("user-service-api-docs")
                 .route(RequestPredicates.path("/docs/user-service/v3/api-docs"),
                         http())
-                .before(uri("http://localhost:8081"))
+                .before(uri(userServiceBaseUrl))
                 .filter(setPath("/v3/api-docs"))
                 .build();
     }
