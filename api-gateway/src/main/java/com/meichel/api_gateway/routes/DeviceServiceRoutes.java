@@ -1,5 +1,6 @@
 package com.meichel.api_gateway.routes;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -18,12 +19,16 @@ import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctio
 
 @Configuration
 public class DeviceServiceRoutes {
+
+    @Value("${device.service.base.url}")
+    private String deviceServiceBaseUrl;
+
     @Bean
     public RouterFunction<ServerResponse> deviceRoutes() {
 
         return route("device-service")
                 .route(RequestPredicates.path("/api/v1/devices/**"), http())
-                .before(uri("http://localhost:8082"))
+                .before(uri(deviceServiceBaseUrl))
                 .filter(CircuitBreakerFilterFunctions.circuitBreaker(
                         "deviceServiceCircuitBreaker", URI.create("forward:/deviceFallbackRoute")))
                 .build();
@@ -44,7 +49,7 @@ public class DeviceServiceRoutes {
         return GatewayRouterFunctions.route("device-service-api-docs")
                 .route(RequestPredicates.path("/docs/device-service/v3/api-docs"),
                         http())
-                .before(uri("http://localhost:8082"))
+                .before(uri(deviceServiceBaseUrl))
                 .filter(setPath("/v3/api-docs"))
                 .build();
     }

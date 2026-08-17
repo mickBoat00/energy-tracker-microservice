@@ -1,5 +1,6 @@
 package com.meichel.api_gateway.routes;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -18,12 +19,16 @@ import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctio
 
 @Configuration
 public class IngestionServiceRoutes {
+
+    @Value("${ingestion.service.base.url}")
+    private String ingestionServiceBaseUrl;
+
     @Bean
     public RouterFunction<ServerResponse> ingestionRoutes() {
 
         return route("ingestion-service")
                 .route(RequestPredicates.path("/api/v1/ingestion/**"), http())
-                .before(uri("http://localhost:8083"))
+                .before(uri(ingestionServiceBaseUrl))
                 .filter(CircuitBreakerFilterFunctions.circuitBreaker(
                         "ingestionServiceCircuitBreaker", URI.create("forward:/ingestionFallbackRoute")))
                 .build();
@@ -44,7 +49,7 @@ public class IngestionServiceRoutes {
         return GatewayRouterFunctions.route("ingestion-service-api-docs")
                 .route(RequestPredicates.path("/docs/ingestion-service/v3/api-docs"),
                         http())
-                .before(uri("http://localhost:8083"))
+                .before(uri(ingestionServiceBaseUrl))
                 .filter(setPath("/v3/api-docs"))
                 .build();
     }

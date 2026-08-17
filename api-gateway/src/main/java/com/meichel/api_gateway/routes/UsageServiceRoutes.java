@@ -1,5 +1,6 @@
 package com.meichel.api_gateway.routes;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -18,12 +19,16 @@ import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctio
 
 @Configuration
 public class UsageServiceRoutes {
+
+    @Value("${usage.service.base.url}")
+    private String usageServiceBaseUrl;
+
     @Bean
     public RouterFunction<ServerResponse> usageRoutes() {
 
         return route("usage-service")
                 .route(RequestPredicates.path("/api/v1/usage/**"), http())
-                .before(uri("http://localhost:8084"))
+                .before(uri(usageServiceBaseUrl))
                 .filter(CircuitBreakerFilterFunctions.circuitBreaker(
                         "usageServiceCircuitBreaker", URI.create("forward:/usageFallbackRoute")))
                 .build();
@@ -44,7 +49,7 @@ public class UsageServiceRoutes {
         return GatewayRouterFunctions.route("usage-service-api-docs")
                 .route(RequestPredicates.path("/docs/usage-service/v3/api-docs"),
                         http())
-                .before(uri("http://localhost:8084"))
+                .before(uri(usageServiceBaseUrl))
                 .filter(setPath("/v3/api-docs"))
                 .build();
     }
