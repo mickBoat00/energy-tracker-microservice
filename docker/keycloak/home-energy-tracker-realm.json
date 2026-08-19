@@ -1,0 +1,22 @@
+{
+  "realm": "home-energy-tracker",
+  "enabled": true,
+  "registrationAllowed": true,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "clients": [
+    {
+      "clientId": "home-energy-tracker-browser",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://localhost:9000/swagger-ui/oauth2-redirect.html"
+      ],
+      "webOrigins": [
+        "+"
+      ]
+    }
+  ]
+}

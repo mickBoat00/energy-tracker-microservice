@@ -49,7 +49,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
 
     volumes:
-      - ./docker/kafka_data:/var/lib/kafka/data
+      - kafka_data:/var/lib/kafka/data
 
   kafka-ui:
     container_name: kafka-ui
@@ -93,18 +93,20 @@ services:
       - influxdb3-core
     restart: unless-stopped
 
-  keycloack:
-    container_name: keycloack
+  keycloak:
+    container_name: keycloak
     image: quay.io/keycloak/keycloak:26.7.1
     ports:
       - "8091:8080"
     command:
       - start-dev
+      - --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
     volumes:
       - keycloak_data:/opt/keycloak/data
+      - ./docker/keycloak:/opt/keycloak/data/import:ro
 
   prometheus:
     image: prom/prometheus
