@@ -3,6 +3,9 @@ package com.meichel.user_service.service;
 import org.springframework.stereotype.Service;
 
 import com.meichel.user_service.dto.UserDto;
+import com.meichel.user_service.dto.UserResponse;
+import com.meichel.user_service.dto.ProfileCreationResult;
+
 import com.meichel.user_service.entity.User;
 import com.meichel.user_service.expection.UserNotFoundException;
 import com.meichel.user_service.repository.UserRepository;
@@ -10,60 +13,65 @@ import com.meichel.user_service.repository.UserRepository;
 @Service
 public class UserService {
 
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
-    public UserDto createUser(UserDto input) {
-        User createdUser = User.builder()
-                .firstName(input.firstName())
-                .lastName(input.lastName())
-                .email(input.email())
-                .address(input.address())
-                .enableAlerting(input.enableAlerting())
-                .alertingThreshold(input.alertingThreshold())
+    public ProfileCreationResult createProfileIfAbsent(String sub, String name, String email, UserDto request) {
+        User existing = userRepository.findBySub(sub);
+        if (existing != null) {
+            return new ProfileCreationResult(toResponse(existing), false);
+        }
+
+        User created = User.builder()
+                .sub(sub)
+                .name(name)
+                .email(email)
+                .address(request.address())
+                .enableAlerting(request.enableAlerting())
+                .alertingThreshold(request.alertingThreshold())
                 .build();
 
-        User saved = userRepository.save(createdUser);
-        return toDto(saved);
+        return new ProfileCreationResult(toResponse(userRepository.save(created)), true);
     }
 
-    public UserDto getUserById(Long id) {
-        User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
-        return toDto(user);
+    public UserResponse getProfileBySub(String sub) {
+        User user = userRepository.findBySub(sub);
+        if (user == null) {
+            throw new UserNotFoundException(
+                    "Profile has not been created yet for sub: " + sub
+                            + ". Please create your profile by calling POST /api/v1/users/ before accessing this endpoint.");
+        }
+        return toResponse(user);
     }
 
-    public UserDto updateUser(Long id, UserDto request) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(id));
+    public UserResponse updateProfileBySub(String sub, UserDto request) {
+        User user = userRepository.findBySub(sub);
+        if (user == null) {
+            throw new UserNotFoundException("User with sub: " + sub + " not found.");
+        }
 
-        user.setFirstName(request.firstName());
-        user.setLastName(request.lastName());
         user.setAddress(request.address());
-        user.setEmail(request.email());
         user.setEnableAlerting(request.enableAlerting());
         user.setAlertingThreshold(request.alertingThreshold());
 
-        User updated = userRepository.save(user);
-        return toDto(updated);
+        return toResponse(userRepository.save(user));
     }
 
-    public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new UserNotFoundException(id);
-        }
-        userRepository.deleteById(id);
+    public UserResponse getUserById(Long id) {
+        User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
+        return toResponse(user);
     }
 
-    private UserDto toDto(User user) {
-        return new UserDto(
+    private UserResponse toResponse(User user) {
+        return new UserResponse(
                 user.getId(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getAddress(),
+                user.getSub(),
+                user.getName(),
                 user.getEmail(),
+                user.getAddress(),
                 user.isEnableAlerting(),
                 user.getAlertingThreshold());
     }

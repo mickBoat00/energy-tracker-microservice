@@ -12,7 +12,12 @@
       "standardFlowEnabled": true,
       "protocol": "openid-connect",
       "redirectUris": [
-        "http://localhost:9000/swagger-ui/oauth2-redirect.html"
+        "http://localhost:9000/swagger-ui/oauth2-redirect.html",
+        "http://localhost:8081/swagger-ui/oauth2-redirect.html",
+        "http://localhost:8082/swagger-ui/oauth2-redirect.html",
+        "http://localhost:8083/swagger-ui/oauth2-redirect.html",
+        "http://localhost:8084/swagger-ui/oauth2-redirect.html",
+        "http://localhost:8086/swagger-ui/oauth2-redirect.html"
       ],
       "webOrigins": [
         "+"
