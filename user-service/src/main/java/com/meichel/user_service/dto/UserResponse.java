@@ -1,4 +1,4 @@
-package com.meichel.usage_service.dto;
+package com.meichel.user_service.dto;
 
 public record UserResponse(
         Long id,
@@ -8,5 +8,4 @@ public record UserResponse(
         String address,
         boolean enableAlerting,
         int alertingThreshold) {
-
 }

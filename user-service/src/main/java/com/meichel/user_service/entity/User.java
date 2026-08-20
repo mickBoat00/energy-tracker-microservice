@@ -22,10 +22,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String firstName;
-    private String lastName;
-    private String address;
+    private String sub;
+    private String name;
     private String email;
+    private String address;
 
     private boolean enableAlerting;
     private int alertingThreshold;
