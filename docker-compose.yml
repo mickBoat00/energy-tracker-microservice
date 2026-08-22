@@ -77,9 +77,23 @@ services:
       - --object-store=file
       - --data-dir=/var/lib/influxdb3/data
       - --plugin-dir=/var/lib/influxdb3/plugins
+      - --admin-token-file=/docker/influxdb/admin-token.json
     volumes:
       - influxdb_data:/var/lib/influxdb3/data
       - influxdb_data:/var/lib/influxdb3/plugins
+      - ./docker/influxdb/admin-token.json:/docker/influxdb/admin-token.json:ro
+
+  influxdb3-init:
+    container_name: influxdb3-init
+    image: influxdb:3-core
+    user: root
+    depends_on:
+      - influxdb3-core
+    volumes:
+      - ./docker/influxdb/admin-token.json:/docker/influxdb/admin-token.json:ro
+      - ./docker/influxdb/init.sh:/init.sh:ro
+    entrypoint: ["/bin/sh", "/init.sh"]
+    restart: "no"
 
   influxdb3-explorer:
     container_name: influxdb3-explorer
