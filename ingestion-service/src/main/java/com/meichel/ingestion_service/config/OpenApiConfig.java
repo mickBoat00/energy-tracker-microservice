@@ -1,54 +1,24 @@
 package com.meichel.ingestion_service.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.License;
-import io.swagger.v3.oas.models.servers.Server;
-
-import io.swagger.v3.oas.models.Components;
-import io.swagger.v3.oas.models.security.OAuthFlow;
-import io.swagger.v3.oas.models.security.OAuthFlows;
-import io.swagger.v3.oas.models.security.Scopes;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
-import io.swagger.v3.oas.models.security.SecurityScheme;
-
-import java.util.List;
 
 @Configuration
 public class OpenApiConfig {
 
-    @Value("${openapi.server.url}")
-    private String serverUrl;
-
-    @Value("${openapi.security.authorization-url}")
-    private String authorizationUrl;
-
-    @Value("${openapi.security.token-url}")
-    private String tokenUrl;
-
     @Bean
     public OpenAPI ingestionServiceApiDocs() {
         return new OpenAPI()
-                .servers(List.of(new Server().url(serverUrl)))
                 .info(new io.swagger.v3.oas.models.info.Info()
                         .title("Ingestion Service API")
                         .description("Ingestion service API for Home Energy Tracker Project")
                         .contact(getContact())
                         .license(getLicense())
-                        .version("1.0.0"))
-                .components(new Components()
-                        .addSecuritySchemes("keycloak", new SecurityScheme()
-                                .type(SecurityScheme.Type.OAUTH2)
-                                .flows(new OAuthFlows()
-                                        .authorizationCode(new OAuthFlow()
-                                                .authorizationUrl(authorizationUrl)
-                                                .tokenUrl(tokenUrl)
-                                                .scopes(new Scopes().addString("openid", "OpenID Connect scope"))))))
-                .security(List.of(new SecurityRequirement().addList("keycloak")));
+                        .version("1.0.0"));
     }
 
     private static License getLicense() {
