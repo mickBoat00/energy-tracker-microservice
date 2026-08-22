@@ -602,3 +602,48 @@ Once I get the public key from Keycloak, I verify the signature and decode the h
 ## 9. Recap - why not just a /login endpoint?
 
 A /login endpoint that returns a JWT is the simplest mental model, but with Keycloak the same effect is achieved through flows: for my browser-based clients I use the standard flow (redirect + code + tokens); if I ever want a plain login-style endpoint for my own clients, I enable direct access grants on a client and keep Keycloak as the identity provider - I never have to build, sign, and rotate JWTs myself.
+
+
+
+security
+Locally it seems my microservice has security issue 
+where a user can bypass the api gateway and call services directly
+and pass a forged sub, email, name in the request headers
+
+but it will not be the case in prod, the idea is  
+all request will come through the api gateway, there will be no 
+direct calls to the microservices because they will be in a private
+networks, private networks are not accessible by the enduser. private network will have
+have a firewall blocking all traffic except the one from the api gateway. 
+
+Docker networking can enfore the trust model locally , where directly communication
+to services is prohibited.
+
+for service to service call, because their are in a private network. for now i trust the calls
+even though a better approach will be to require service to service authentication
+
+The api gateway will be in a public network and that will be the only entrypoint into
+the microservice. the api gateway ensure users are authenticated, verify their 
+jwt token, and 
+even if the user forges the request header, email, name and sub
+the api gateway overrrides it with the one from the jwt, 
+and if there is no jwt in the request is not when permitted in the first place.
+
+Gateway layer:  JWT required → identity extracted → headers injected
+Service layer:  No JWT check → trusts X-User-Sub if present
+
+
+Security model
+
+Local dev: Microservices are reachable on localhost. 
+A caller can bypass the gateway and forge X-User-Sub, X-User-Email, X-User-Name. 
+This is expected in dev — the trust model isn't enforced locally.
+
+
+Production: Microservices sit on a private network (not reachable by end users). A firewall allows only the API gateway to reach them. The gateway is the sole public entry point.
+
+User → Gateway → Service: The gateway validates the JWT against Keycloak (resource server). Protected routes (/api/v1/**) require a valid token. The gateway extracts sub, email, name from the JWT and injects them as X-User-* headers — overriding any forged values from the client. Microservices do not validate JWTs; they trust headers from the gateway.
+
+Service → Service: Calls bypass the gateway (e.g. usage-service → user-service). For now, trusted on the private network with no auth. Internal lookup endpoints (/users/{id}/, /users/sub/{sub}/) are open to any internal caller. Better long-term: client credentials, mTLS, or service mesh.
+
+Not all gateway paths require JWT: Swagger UI, /docs/**, and /actuator/** are excluded.

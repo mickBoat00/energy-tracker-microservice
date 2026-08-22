@@ -21,4 +21,11 @@ public class UserClient {
                 .retrieve()
                 .body(UserResponse.class);
     }
+
+    public UserResponse getUserBySub(String sub) {
+        return restClient.get()
+                .uri("/api/v1/users/sub/{sub}/", sub)
+                .retrieve()
+                .body(UserResponse.class);
+    }
 }

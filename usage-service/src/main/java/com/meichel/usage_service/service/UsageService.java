@@ -11,6 +11,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -156,17 +159,24 @@ public class UsageService {
 
     }
 
-    public UserUsageResponse getUserDevicesUsage(Long userId, long interval, ChronoUnit intervalUnit) {
+    public UserUsageResponse getUserDevicesUsage(String userSub, long interval, ChronoUnit intervalUnit) {
         List<DeviceEnergyUsage> devicesEnergies = new ArrayList<>();
         UserResponse user = null;
 
         try {
-            user = userClient.getUserById(userId);
+            user = userClient.getUserBySub(userSub);
         } catch (Exception e) {
-            log.warn("Failed to fetch user {}: {}", userId, e.getMessage());
+            log.warn("Failed to fetch user {}: {}", userSub, e.getMessage());
         }
 
         try {
+
+            if (user == null) {
+                return UserUsageResponse.builder().build();
+            }
+
+            Long userId = user.id();
+
             List<DeviceResponse> devices = deviceClient.getUserDevices(userId);
             log.info("device client response {}", devices);
 
@@ -208,7 +218,7 @@ public class UsageService {
                     log.error("Failed to query data from the database", e);
                 }
             } else {
-                log.warn("no devices found for user {}", userId);
+                log.warn("no devices found for user {}", user.id());
             }
 
         } catch (Exception e) {
