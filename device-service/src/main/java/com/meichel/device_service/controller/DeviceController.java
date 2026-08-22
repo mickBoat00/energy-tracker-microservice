@@ -10,9 +10,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.meichel.device_service.dto.DeviceRequest;
 import com.meichel.device_service.entity.Device;
 import com.meichel.device_service.service.DeviceService;
 
@@ -27,8 +29,13 @@ public class DeviceController {
     }
 
     @PostMapping("/")
-    public ResponseEntity<Device> createDevice(@RequestBody Device request) {
-        Device created = deviceService.createDevice(request);
+    public ResponseEntity<Device> createDevice(
+            @RequestHeader(value = "X-User-Sub", required = false) String sub,
+            @RequestBody DeviceRequest request) {
+        if (sub == null || sub.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Device created = deviceService.createDevice(request, sub);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
@@ -40,13 +47,22 @@ public class DeviceController {
     @PutMapping("/{id}/")
     public ResponseEntity<Device> updateDevice(
             @PathVariable Long id,
-            @RequestBody Device request) {
-        return ResponseEntity.ok(deviceService.updateDevice(id, request));
+            @RequestHeader(value = "X-User-Sub", required = false) String sub,
+            @RequestBody DeviceRequest request) {
+        if (sub == null || sub.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(deviceService.updateDevice(id, request, sub));
     }
 
     @DeleteMapping("/{id}/")
-    public ResponseEntity<Void> deleteDevice(@PathVariable Long id) {
-        deviceService.deleteDevice(id);
+    public ResponseEntity<Void> deleteDevice(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Sub", required = false) String sub) {
+        if (sub == null || sub.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        deviceService.deleteDevice(id, sub);
         return ResponseEntity.noContent().build();
     }
 
