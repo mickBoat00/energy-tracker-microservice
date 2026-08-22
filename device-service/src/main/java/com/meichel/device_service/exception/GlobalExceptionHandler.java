@@ -20,4 +20,14 @@ public class GlobalExceptionHandler {
                 "message", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
+
+    @ExceptionHandler(DeviceForbiddenException.class)
+    public ResponseEntity<Map<String, Object>> handleDeviceForbidden(DeviceForbiddenException ex) {
+        Map<String, Object> body = Map.of(
+                "timestamp", Instant.now().toString(),
+                "status", HttpStatus.FORBIDDEN.value(),
+                "error", "Forbidden",
+                "message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
 }

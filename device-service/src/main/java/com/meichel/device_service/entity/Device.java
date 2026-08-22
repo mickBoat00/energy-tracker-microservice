@@ -25,5 +25,6 @@ public class Device {
     private String type;
     private String location;
     private Long userId;
+    private String userSub;
 
 }
